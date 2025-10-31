@@ -51,6 +51,18 @@ function saveProducts(list){
 function renderProductsIfAny(){
   const container = document.querySelector('section.products.flex')
   if(!container) return
+
+  // If FirebaseClient is initialized, listen for central data; otherwise use localStorage
+  if(window.FirebaseClient && window.FirebaseClient.isReady()){
+    // attach realtime listener
+    try{
+      window.FirebaseClient.listenProducts((products)=>{
+        renderProductsFromArray(products, container)
+      })
+    }catch(e){ console.error('Firebase listen failed', e) }
+    return
+  }
+
   const allProducts = getProducts()
   if(!allProducts || !allProducts.length) return // keep static HTML
 
@@ -107,6 +119,31 @@ function renderProductsIfAny(){
     const originalIdx = allProducts.findIndex(op => op === p)
     card.innerHTML = `
       <a href="pages/product-details.html" data-index="${originalIdx}">
+        <img src="${imgSrc}" alt="" />
+      </a>
+      <div class="content">
+  <h1 class="title">${escapeHtml(p.title||'عنوان المنتج')}</h1>
+  <p class="category">${escapeHtml((p.group||'') + (p.subcategory?(' / '+p.subcategory):''))}</p>
+  <p class="description">${escapeHtml(p.description||'')}</p>
+        <div class="flex" style="justify-content: space-between; padding-bottom: 0.7rem">
+          <div class="price">${formatPrice(p.price || 0)}</div>
+          <button class="add-to-cart flex"><i class="fa-solid fa-cart-plus"></i>أضف إلى السلة</button>
+        </div>
+      </div>
+    `
+    container.appendChild(card)
+  })
+}
+
+// helper used by Firebase path to render an array of product objects
+function renderProductsFromArray(products, container){
+  container.innerHTML = ''
+  products.forEach((p) => {
+    const card = document.createElement('article')
+    card.className = 'card'
+    const imgSrc = (p.images && p.images[0])? p.images[0] : './images/placeholder.svg'
+    card.innerHTML = `
+      <a href="pages/product-details.html" data-id="${p.id || ''}">
         <img src="${imgSrc}" alt="" />
       </a>
       <div class="content">
@@ -403,6 +440,7 @@ document.addEventListener('click', (e) => {
   if (href.endsWith('product-details.html') || href.indexOf('product-details.html') !== -1) {
     // Prefer storing the canonical product object by index (if available)
     const idxAttr = a.getAttribute('data-index')
+    const dataId = a.getAttribute('data-id')
     if (idxAttr) {
       const products = getProducts()
       const prod = products[Number(idxAttr)]
@@ -412,6 +450,18 @@ document.addEventListener('click', (e) => {
         localStorage.setItem('dioura_selected_product', JSON.stringify(selected))
         return
       }
+    }
+    // If a Firebase-backed product id is present and Firebase is available, fetch it and store
+    if (dataId && window.FirebaseClient && window.FirebaseClient.isReady()){
+      try{
+        window.FirebaseClient.fetchProducts().then(products => {
+          const prod = products.find(x=> x.id === dataId)
+          if(!prod) return
+          const selected = { title: prod.title||'', price: Number(prod.price)||0, images: (prod.images||[]), img: (prod.images && prod.images[0])||'', desc: prod.description||'', discount: prod.discount || 0 }
+          localStorage.setItem('dioura_selected_product', JSON.stringify(selected))
+        }).catch(e=>{console.error('fetchProducts for details', e)})
+        return
+      }catch(e){ /* ignore */ }
     }
     // Fallback: extract from DOM (for compatibility with other card markup)
     const card = a.closest('.card') || a.closest('.product') || a.closest('article')
@@ -746,6 +796,14 @@ function initCheckoutPage() {
     }
     orders.push(order)
     localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+    // also save to Firebase when available so admin can see orders centrally
+    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+      try{
+        window.FirebaseClient.addOrder(order).then(id=>{
+          console.info('Order saved to Firestore', id)
+        }).catch(e=>{ console.error('Failed saving order to Firestore', e) })
+      }catch(e){ console.error('addOrder error', e) }
+    }
     clearCart()
     // show confirmation
     const result = document.getElementById('checkoutResult')
@@ -763,6 +821,28 @@ function initCheckoutPage() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
+  // If you provide a Firebase config in `js/firebase-config.js` (window.FIREBASE_CONFIG)
+  // attempt to initialize the FirebaseClient wrapper. This will retry a few times
+  // in case `js/firebase-client.js` is loaded after `main.js`.
+  ;(function tryInitFirebase(){
+    if(!window.FIREBASE_CONFIG) return
+    let attempts = 0
+    const doInit = async ()=>{
+      if(window.FirebaseClient && typeof window.FirebaseClient.init === 'function'){
+        try{
+          await window.FirebaseClient.init(window.FIREBASE_CONFIG)
+          console.info('Firebase initialized via window.FIREBASE_CONFIG')
+        }catch(e){
+          console.error('Firebase init failed', e)
+        }
+        return
+      }
+      attempts++
+      if(attempts > 6) return
+      setTimeout(doInit, 500)
+    }
+    doInit()
+  })()
   // initialize search input and handlers
   try{ initSearch() }catch(e){}
   try{ initCategories(); initCategorySidebar() }catch(e){}

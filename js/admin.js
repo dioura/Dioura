@@ -24,11 +24,37 @@
   function renderProducts(){
     const tbody = document.querySelector('#productsTable tbody')
     if(!tbody) return
+
+    // If Firebase is ready use it; otherwise fall back to localStorage
+    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+      window.FirebaseClient.fetchProducts().then(products => {
+        tbody.innerHTML = ''
+        products.forEach((p)=>{
+          const tr = document.createElement('tr')
+          const img = (p.images && p.images.length)? `<img src="${p.images[0]}" />` : '-'
+          tr.innerHTML = `
+            <td>${img}</td>
+            <td>${escapeHtml(p.title||'')}</td>
+            <td>${escapeHtml((p.group||'') + (p.subcategory?(' / '+p.subcategory):''))}</td>
+            <td>${formatPrice(p.price||0)}</td>
+            <td>${p.discount? (p.discount+'%') : '-'}</td>
+            <td>${p.published? '<span class="published-yes">نعم</span>':'<span class="published-no">لا</span>'}</td>
+            <td>
+              <button data-id="${p.id}" class="btn-small btn-edit actions-btn">تعديل</button>
+              <button data-id="${p.id}" class="btn-small btn-delete actions-btn">حذف</button>
+            </td>
+          `
+          tbody.appendChild(tr)
+        })
+      }).catch(e=>{ console.error('renderProducts firebase', e) })
+      return
+    }
+
     const products = getProducts()
     tbody.innerHTML = ''
     products.forEach((p,i)=>{
       const tr = document.createElement('tr')
-      const img = (p.images && p.images.length)?`<img src="${p.images[0]}" />`:'-'
+      const img = (p.images && p.images.length)? `<img src="${p.images[0]}" />` : '-'
       tr.innerHTML = `
         <td>${img}</td>
         <td>${escapeHtml(p.title||'')}</td>
@@ -95,21 +121,37 @@
     if(existing.createdAt) createdAt = existing.createdAt
   }
   const item = {title,description,images,price,discount,published, group, subcategory, createdAt}
-        if(index){
-          products[Number(index)] = item
+        if(window.FirebaseClient && window.FirebaseClient.isReady()){
+          // if editing, admin form index may contain a doc id when editing Firebase entries
+          if(index){
+            // treat index as doc id
+            await window.FirebaseClient.updateProduct(index, item)
+          } else {
+            await window.FirebaseClient.addProduct(item)
+          }
+          form.reset()
+          const preview = document.getElementById('imagePreview')
+          if(preview) preview.innerHTML = ''
+          // re-render (listener or manual)
+          renderProducts()
+          alert('تم حفظ المنتج (Firebase)')
         } else {
-          products.push(item)
+          if(index){
+            products[Number(index)] = item
+          } else {
+            products.push(item)
+          }
+          saveProducts(products)
+          console.log('admin: products now', products)
+          form.reset()
+          // clear preview
+          const preview = document.getElementById('imagePreview')
+          if(preview) preview.innerHTML = ''
+          renderProducts()
+          alert('تم حفظ المنتج')
+          // notify main script to re-render if it listens to storage changes
+          window.dispatchEvent(new Event('storage'))
         }
-        saveProducts(products)
-        console.log('admin: products now', products)
-        form.reset()
-        // clear preview
-        const preview = document.getElementById('imagePreview')
-        if(preview) preview.innerHTML = ''
-        renderProducts()
-        alert('تم حفظ المنتج')
-        // notify main script to re-render if it listens to storage changes
-        window.dispatchEvent(new Event('storage'))
       }catch(err){
         console.error('Error saving product', err)
         alert('خطأ أثناء حفظ المنتج: ' + (err && err.message ? err.message : String(err)))
@@ -119,52 +161,85 @@
   const clearBtn = document.getElementById('clearProductForm')
   if(clearBtn) clearBtn.addEventListener('click',()=>form.reset())
 
-  // edit / delete buttons
+  // edit / delete buttons (supports both localStorage index and Firebase doc id)
   const productsTbody = document.querySelector('#productsTable tbody')
-  if(productsTbody) productsTbody.addEventListener('click',(e)=>{
-      const edit = e.target.closest('.btn-edit')
-      const del = e.target.closest('.btn-delete')
-      if(edit){
-        const i = Number(edit.dataset.index)
-        const p = getProducts()[i]
-        if(!p) return
+  if(productsTbody) productsTbody.addEventListener('click', async (e)=>{
+      const editBtn = e.target.closest('.btn-edit')
+      const delBtn = e.target.closest('.btn-delete')
+      if(editBtn){
+        const docId = editBtn.dataset.id
+        const idx = editBtn.dataset.index ? Number(editBtn.dataset.index) : null
         const f = form
-        f.index.value = i
-        f.title.value = p.title||''
-        f.description.value = p.description||''
-        // show existing images as preview; uploading new files will replace them
-        const preview = document.getElementById('imagePreview')
-        if(preview){
-          preview.innerHTML = ''
-          ;(p.images||[]).forEach(src => {
-            const img = document.createElement('img')
-            img.src = src
-            img.style.height = '60px'
-            img.style.marginRight = '6px'
-            preview.appendChild(img)
-          })
+        if(docId && window.FirebaseClient && window.FirebaseClient.isReady()){
+          try{
+            const products = await window.FirebaseClient.fetchProducts()
+            const p = products.find(x=>x.id === docId)
+            if(!p) return
+            f.index.value = docId
+            f.title.value = p.title || ''
+            f.description.value = p.description || ''
+            const preview = document.getElementById('imagePreview')
+            if(preview){
+              preview.innerHTML = ''
+              ;(p.images||[]).forEach(src => {
+                const img = document.createElement('img')
+                img.src = src
+                img.style.height = '60px'
+                img.style.marginRight = '6px'
+                preview.appendChild(img)
+              })
+            }
+            f.price.value = p.price||0
+            f.discount.value = p.discount||0
+            f.published.checked = !!p.published
+            const groupSel = document.getElementById('productGroup')
+            const subSel = document.getElementById('productSubcategory')
+            if(groupSel) groupSel.value = p.group || ''
+            if(groupSel) groupSel.dispatchEvent(new Event('change'))
+            if(subSel) subSel.value = p.subcategory || ''
+          }catch(err){ console.error('Error loading firebase product for edit', err) }
+        } else if(idx !== null){
+          const p = getProducts()[idx]
+          if(!p) return
+          f.index.value = idx
+          f.title.value = p.title||''
+          f.description.value = p.description||''
+          const preview = document.getElementById('imagePreview')
+          if(preview){
+            preview.innerHTML = ''
+            ;(p.images||[]).forEach(src => {
+              const img = document.createElement('img')
+              img.src = src
+              img.style.height = '60px'
+              img.style.marginRight = '6px'
+              preview.appendChild(img)
+            })
+          }
+          f.price.value = p.price||0
+          f.discount.value = p.discount||0
+          f.published.checked = !!p.published
+          const groupSel = document.getElementById('productGroup')
+          const subSel = document.getElementById('productSubcategory')
+          if(groupSel) groupSel.value = p.group || ''
+          if(groupSel) groupSel.dispatchEvent(new Event('change'))
+          if(subSel) subSel.value = p.subcategory || ''
         }
-        f.price.value = p.price||0
-        f.discount.value = p.discount||0
-        f.published.checked = !!p.published
-        // populate group/subcategory selects
-        const groupSel = document.getElementById('productGroup')
-        const subSel = document.getElementById('productSubcategory')
-        if(groupSel) groupSel.value = p.group || ''
-        // rebuild subcategories for chosen group
-        if(groupSel) {
-          const ev = new Event('change')
-          groupSel.dispatchEvent(ev)
-        }
-        if(subSel) subSel.value = p.subcategory || ''
       }
-      if(del){
+      if(delBtn){
         if(!confirm('هل تريد حذف هذا المنتج؟')) return
-        const i = Number(del.dataset.index)
-        const products = getProducts()
-        products.splice(i,1)
-        saveProducts(products)
-        renderProducts()
+        const docId = delBtn.dataset.id
+        const idx = delBtn.dataset.index ? Number(delBtn.dataset.index) : null
+        if(docId && window.FirebaseClient && window.FirebaseClient.isReady()){
+          try{
+            await window.FirebaseClient.deleteProduct(docId)
+            renderProducts()
+          }catch(err){ console.error('Error deleting firebase product', err) }
+        } else if(idx !== null){
+          const products = getProducts()
+          products.splice(idx,1)
+          saveProducts(products)
+          renderProducts()
+        }
       }
     })
   }
@@ -173,8 +248,27 @@
   function renderOrders(){
     const tbody = document.querySelector('#ordersTable tbody')
     if(!tbody) return
-    const orders = JSON.parse(localStorage.getItem(ORDERS_KEY)||'[]')
     tbody.innerHTML = ''
+    // If Firebase is available use it for orders; otherwise fall back to localStorage
+    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+      window.FirebaseClient.fetchOrders().then(orders=>{
+        orders.slice().reverse().forEach(o=>{
+          const tr = document.createElement('tr')
+          const itemsText = (o.items||[]).map(i=>escapeHtml(i.title)+' x'+(i.quantity||1)).join('<br>')
+          const total = (o.items||[]).reduce((s,p)=>s + ((p.price||0)*(p.quantity||1)),0)
+          tr.innerHTML = `
+            <td>${escapeHtml(o.id||'')}</td>
+            <td>${escapeHtml(o.name||'')}<br>${escapeHtml(o.phone||'')}<br>${escapeHtml(o.email||'')}</td>
+            <td>${itemsText}</td>
+            <td>${formatPrice(total)}</td>
+            <td>${new Date(o.createdAt||'').toLocaleString()}</td>
+          `
+          tbody.appendChild(tr)
+        })
+      }).catch(e=>{ console.error('renderOrders firebase', e) })
+      return
+    }
+    const orders = JSON.parse(localStorage.getItem(ORDERS_KEY)||'[]')
     orders.slice().reverse().forEach(o=>{
       const tr = document.createElement('tr')
       const itemsText = (o.items||[]).map(i=>escapeHtml(i.title)+' x'+(i.quantity||1)).join('<br>')
@@ -255,11 +349,22 @@
   bindProductForm()
     // Clear all products button (global wipe)
     const clearAllBtn = document.getElementById('clearAllProductsBtn')
-    if (clearAllBtn) clearAllBtn.addEventListener('click', ()=>{
+    if (clearAllBtn) clearAllBtn.addEventListener('click', async ()=>{
       if(!confirm('هل تريد حذف جميع المنتجات نهائياً؟ هذه العملية لا يمكن التراجع عنها.')) return
-      saveProducts([])
-      renderProducts()
-      alert('تم حذف جميع المنتجات من المتجر')
+      if(window.FirebaseClient && window.FirebaseClient.isReady()){
+        try{
+          const prods = await window.FirebaseClient.fetchProducts()
+          for(const p of prods){
+            try{ await window.FirebaseClient.deleteProduct(p.id) }catch(e){ console.error('delete product', p.id, e) }
+          }
+          renderProducts()
+          alert('تم حذف جميع المنتجات من المتجر (Firebase)')
+        }catch(e){ console.error('Error clearing firebase products', e); alert('فشل حذف المنتجات') }
+      } else {
+        saveProducts([])
+        renderProducts()
+        alert('تم حذف جميع المنتجات من المتجر')
+      }
     })
     renderOrders()
     renderCoupons()
