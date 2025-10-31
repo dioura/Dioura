@@ -1,0 +1,43 @@
+/* Admin page styles */
+.admin-root{
+  max-width:1100px;
+  margin:2rem auto;
+  padding:1rem;
+}
+.admin-root h1{font-size:1.6rem;margin-bottom:1rem}
+.panel{background:#fff;padding:1rem;border-radius:6px;margin-bottom:1.2rem;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.product-form label, .coupon-form label{display:block;margin-bottom:.6rem}
+.product-form input[type="text"], .product-form input[type="number"], .product-form textarea, .product-form input[name="images"], .coupon-form input{width:100%;padding:.45rem;border:1px solid #ddd;border-radius:4px}
+.form-actions{margin-top:.6rem;display:flex;gap:.5rem}
+.save{background:#ff7a00;color:#fff;padding:.5rem .8rem;border-radius:4px;border:0}
+#productsTable, #ordersTable, #couponsTable{width:100%;border-collapse:collapse;margin-top:.6rem}
+#productsTable th, #productsTable td, #ordersTable th, #ordersTable td, #couponsTable th, #couponsTable td{border:1px solid #eee;padding:.5rem;text-align:right}
+.products-table-wrap img{height:50px;width:auto;border-radius:4px}
+.image-preview img{height:60px;width:auto;border-radius:4px;margin-right:.4rem}
+.actions-btn{margin-left:.4rem}
+.btn-small{padding:.3rem .5rem;border-radius:4px;border:0}
+.btn-edit{background:#0a84ff;color:#fff}
+.btn-delete{background:#ff3b30;color:#fff}
+.published-yes{color:green;font-weight:bold}
+.published-no{color:#888}
+
+/* Make table wrappers scrollable on small screens to avoid broken layout */
+.products-table-wrap, .orders-table-wrap, #couponsTable, .coupons-table-wrap {
+  overflow-x: auto;
+}
+
+/* Responsive adjustments for admin panels and forms */
+@media (max-width: 900px) {
+  .admin-root{
+    padding: 0.6rem;
+    margin: 1rem auto;
+    width: 95%;
+  }
+
+  .panel{ padding: 0.8rem }
+
+  .form-actions{ flex-direction: column; align-items: stretch; gap: 0.5rem }
+
+  /* tables: keep layout but smaller font and allow horizontal scroll */
+  #productsTable, #ordersTable, #couponsTable{ font-size: 0.92rem }
+}

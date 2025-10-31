@@ -1,0 +1,60 @@
+footer{
+  text-align: center;
+  background-color: var(--footer-bg);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+
+  padding-block: 1rem;
+  margin-top: 3rem;
+  color: white;
+  font-size: 17px;
+}
+
+footer span {
+  color: #ff7790;
+  text-transform: capitalize;
+}
+
+/* Bottom bar with copyright and social icons */
+footer .footer-bottom {
+  display: flex;
+  flex-direction: column; /* text centered, icons below */
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 0.6rem;
+  margin-top: 0.8rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+footer .footer-bottom p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+footer .social-icons a {
+  color: #fff;
+  margin-inline-start: 0.5rem;
+  font-size: 1.05rem;
+  padding: 0.45rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  /* unify icon background color to the orange brand color */
+  background: #ff7a00;
+}
+
+/* Make the icon SVGs/font icons use the same orange color on transparent bg
+   but keep them white on top of the orange circles for contrast (background already orange). */
+footer .social-icons a i { color: #fff }
+
+footer .social-icons a:hover {
+  filter: brightness(0.95);
+}
+
+@media (min-width: 900px) {
+  /* On wide screens keep centered layout but allow icons and text to appear inline if desired later */
+  footer .footer-bottom { text-align: center }
+}

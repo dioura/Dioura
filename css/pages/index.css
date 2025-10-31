@@ -1,0 +1,271 @@
+/* =======================
+    Background Image
+==========================*/
+div.top-img {
+  position: relative;
+  height: 100vh;
+  background-image: url(../../images/bac.jpg);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+@media (max-width:1000px) {
+  div.top-img { background-position: left; }
+}
+
+/* For mobile devices avoid fixed background (performance) */
+@media (max-width:800px){
+  div.top-img{ background-attachment: scroll; height: 50vh }
+  .hero-cta{ padding-top: 12px }
+}
+
+
+/* =======================
+    Text on Image
+==========================*/
+
+section.content {
+  font-size: 2rem;
+  position: absolute;
+
+  top: 45%;
+  transform: translateY(-50%);
+
+  /* anchor the hero block from the left edge so it appears on the left side */
+  left: 10%;
+  right: auto;
+
+  /* local content elements */
+}
+
+.lifestyle {
+  text-transform: uppercase;
+  font-size: 1.7rem;
+}
+
+.men {
+  margin-top: 0.7rem;
+  font-weight: bold;
+}
+
+.sale {
+  margin-block: 0.5rem;
+  font-weight: bold;
+}
+.sale span {
+  color: crimson;
+  margin-left: 0.8rem;
+}
+
+.free-shipping {
+  font-size: 1.5rem;
+}
+
+button {
+  background-color: var(--blue-button);
+  color: white;
+  margin-top: 0.9rem;
+  font-size: 0.9rem;
+  border-radius: 3px;
+  padding: 0.6rem 1.6rem;
+  display: inline-block;
+  text-decoration: none;
+}
+
+  /* CTA link style for new single centered button */
+  .hero-cta .cta-button{
+    background-color: #000; /* black as requested */
+    color: #fff;
+    padding: 0.9rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* keep a subtle hover effect (slightly lighter) */
+  .hero-cta .cta-button:hover{ filter: brightness(0.95); transform: translateY(-2px); }
+
+  /* left-aligned hero layout */
+.hero-left{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* left side */
+  gap: 0.6rem;
+  padding-left: 10%; /* space from the left edge (use physical left for RTL correctness) */
+  text-align: left;
+  position: relative;
+}
+
+  /* right-side variant for RTL: place hero text/button on the opposite side */
+  .hero-right{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* right side */
+    gap: 0.6rem;
+    padding-inline-end: 10%; /* space from the right edge */
+    text-align: right;
+  }
+
+  /* hero text wrapper to improve readability on the background */
+.hero-text{
+    /* removed background per user request; keep inline layout for spacing */
+    background: transparent;
+    padding: 0; /* no extra panel */
+    border-radius: 0;
+    display: inline-block;
+  }
+
+  /* three-line hero message styling */
+.hero-text .hero-line{
+    display:block;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.05;
+    /* keep a subtle shadow for legibility over the image */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    white-space: nowrap;
+  }
+  /* colors per line: 1=green, 2=red, 3=white */
+.hero-text .hero-line:nth-of-type(1){ color: #28a745 }
+.hero-text .hero-line:nth-of-type(2){ color: #e41d43 }
+.hero-text .hero-line:nth-of-type(3){ color: #ffffff }
+.hero-text .hero-line + .hero-line{ margin-top: 0.18rem }
+
+  /* ensure CTA stays visually prominent on dark/light parts of the hero */
+  .hero-right .cta-button{ box-shadow: 0 6px 18px rgba(0,0,0,0.25) }
+
+  /* reduce CTA size so it looks smaller and balanced */
+  .hero-cta .cta-button{
+    padding: 0.65rem 1.2rem; /* slightly larger */
+    font-size: 1.08rem;
+    border-radius: 6px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.18);
+  }
+
+
+/* ===============================
+    Main contents (products)
+==================================*/
+main h1.recommended {
+  margin: 2.3rem 0 2rem 2%;
+}
+
+@media (max-width: 600px) {
+  main h1.recommended {
+    margin: 2.3rem 0 2rem 0;
+    font-size: 1.4rem;
+  }
+}
+
+main section.products.flex{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+
+main section.products.flex article.card{
+  border-radius: 5px;
+  box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 1px -1px, rgba(0, 0, 0, 0.14) 0px 1px 1px 0px, rgba(0, 0, 0, 0.12) 0px 1px 3px 0px;
+  transition: 0.2s;
+  width: 100%;
+  overflow: hidden;
+  /* make card a column-flex so content and image can share fixed layout
+     this enables equal-height cards across the grid */
+  display: flex;
+  flex-direction: column;
+  /* Remove a fixed min-height so card height follows image aspect ratio + content.
+    We rely on consistent image aspect-ratio below so cards align visually. */
+}
+
+main section.products.flex article.card:hover{
+  transform: scale(1.01);
+}
+
+main section.products.flex img {
+  border-radius: 5px 5px 0 0;
+  width: 100%;
+  /* keep images at a consistent aspect ratio so they scale nicely with card width */
+  aspect-ratio: 4 / 3; /* change to 1 / 1 for square thumbnails if you prefer */
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+main section.products.flex .card .content {
+  background-color: #fff;
+  border-radius: 0 0 5px 5px;
+  padding: 0.6rem;
+  /* make content grow to fill remaining space so cards have equal height */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1 1 auto;
+}
+
+main section.products.flex .card .content .title {
+  padding-top: 0.7rem;
+  padding-inline: 0.4rem;
+  text-transform: capitalize;
+}
+main section.products.flex .card .content .category {
+  padding-inline: 0.4rem;
+  font-size: 0.75rem;
+  color: #6b6b6b;
+  margin-top: 0.15rem;
+}
+
+main section.products.flex .card .content .description {
+  padding-inline: 0.4rem;
+  font-size: 0.8rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.1rem;
+}
+
+main section.products.flex .card .content .price {
+  margin-left: 0.88rem;
+  font-size: 0.9rem;
+  color: rgb(199, 0, 40);
+  font-weight: bold;
+}
+
+main section.products.flex .add-to-cart {
+  margin-right: 0.88rem;
+  background-color: var(--blue-button);
+  color: #fff;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  gap: 0.33rem;
+}
+
+main section.products.flex .fa-solid {
+  color: white;
+}
+
+@media (max-width:800px){
+  /* stack hero text and reduce font sizes */
+  .hero-text .hero-line{ font-size: 1.05rem }
+  .hero-cta .cta-button{ padding: .6rem 1rem; font-size: .95rem }
+  main h1.recommended{ text-align: center; margin-left: 0 }
+  main section.products.flex { grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 12px }
+  .card .content .description{ display:none }
+  /* responsive: preserve aspect ratio and let image scale with width */
+  main section.products.flex img { aspect-ratio: 4 / 3 }
+}
+
+@media (max-width:480px){
+  .hero-text .hero-line{ font-size: 0.95rem }
+  .hero-cta { padding-top: 8px }
+  main section.products.flex { grid-template-columns: 1fr }
+  .card .content .title{ font-size: 1rem }
+  .card .content .price{ font-size: 1rem }
+  /* mobile thumbnails: keep aspect ratio so height adjusts automatically */
+  main section.products.flex img { aspect-ratio: 4 / 3 }
+}

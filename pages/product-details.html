@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تفاصيل المنتج</title>
+    <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/header.css" />
+    <link rel="stylesheet" href="../css/footer.css" />
+
+    <link
+    rel="shortcut icon"
+    href="../images/bag-shopping-solid.svg"
+    type="image/x-icon"
+  />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+      integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="../css/pages/product-details.css">
+  </head>
+  <body
+    style="
+      height: 100vh;
+      display: grid;
+      align-items: start;
+      grid-template-rows: auto 1fr auto;
+    "
+  >
+    <header class="flex ">
+      <a href="/" class="logo">
+        <img src="../images/dioura.png" alt="Dioura" />
+        <div class="brand">
+          <span>Dioura</span>
+          <p style="letter-spacing: 0.5px">ديورا</p>
+        </div>
+      </a>
+
+      <div class="links">
+        <a style="position: relative" class="cart" href="./cart.html">
+          <i class="fa-solid fa-cart-shopping"></i>
+          0 ل.س
+          <span class="products-number">2</span>
+        </a>
+      </div>
+    </header>
+
+  <main style="text-align: center;" class="flex">
+
+      <div class="product-grid">
+        <div class="media-col">
+          <div class="main-image-wrap">
+            <img id="productMainImage" alt="" src="../images/placeholder.svg" class="main-image" />
+          </div>
+          <div id="productThumbnails" class="thumbs-row" aria-label="صور المنتج">
+            <!-- thumbnails inserted here -->
+          </div>
+        </div>
+
+        <div class="info-col">
+          <div class="title-row">
+            <h2>عنوان المنتج</h2>
+            <div class="meta-inline">
+              <div class="rating" aria-hidden="true">★★★★★</div>
+              <div id="discountBadge" class="discount-badge" style="display:none">-10%</div>
+            </div>
+          </div>
+
+          <p class="price">1,000,000 ل.س</p>
+
+          <p class="description">وصف تفصيلي للمنتج. مواصفات عالية الجودة ومناسب للاستخدام اليومي.</p>
+
+          <div class="purchase-row">
+            <div class="quantity-control">
+              <button id="qtyDecrease" type="button" aria-label="نقص">-</button>
+              <input id="productQuantity" type="number" min="1" value="1" />
+              <button id="qtyIncrease" type="button" aria-label="زيادة">+</button>
+            </div>
+
+            <div class="buy-actions">
+              <button id="buyNow" class="buy-now">اشترِ الآن</button>
+              <button id="addToCartBtn" class="add-to-cart"><i class="fa-solid fa-cart-plus"></i> أضف إلى السلة</button>
+            </div>
+          </div>
+
+          <div class="product-extra">
+            <p><strong>توصيل:</strong> شحن خلال 3-5 أيام عمل</p>
+            <p><strong>الضمان:</strong> 12 شهر</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <footer class="">
+      <div class="footer-bottom">
+        <p>© 2025 Dioura — جميع الحقوق محفوظة</p>
+        <div class="social-icons">
+          <a href="https://wa.me/963942236206" class="whatsapp" target="_blank" rel="noopener" aria-label="واتساب"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="https://www.facebook.com/profile.php?id=61582659429731" class="facebook" target="_blank" rel="noopener" aria-label="فيسبوك"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://www.facebook.com/profile.php?id=61582659429731" class="instagram" target="_blank" rel="noopener" aria-label="انستجرام"><i class="fa-brands fa-instagram"></i></a>
+          <a href="tel:+963942236206" class="phone" aria-label="اتصال"><i class="fa-solid fa-phone"></i></a>
+          <a href="mailto:diourasyria@gmail.com" class="email" aria-label="بريد الكتروني"><i class="fa-solid fa-envelope"></i></a>
+        </div>
+      </div>
+    </footer>
+    <!-- Floating categories toggle and side-panel (shared) -->
+    <!-- categories toggle removed on this page (only on homepage) -->
+
+    <script src="../js/main.js"></script>
+  </body>
+</html>
