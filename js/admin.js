@@ -295,14 +295,14 @@
             // force logout after password change to require re-login
             sessionStorage.removeItem('dioura_admin_auth')
             alert('تم حفظ بيانات المسؤول. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
-            window.location.href = '/'
+            window.location.href = '../index.html'
             return
           }catch(e){
             // fallback: store plaintext if hashing fails
             setAdminCreds({user, passHash: null, pass: pass})
             sessionStorage.removeItem('dioura_admin_auth')
             alert('تم حفظ بيانات المسؤول (ملاحظة: تم تخزين كلمة المرور نصاً). سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
-            window.location.href = '/'
+            window.location.href = '../index.html'
             return
           }
         } else {
@@ -311,7 +311,7 @@
           setAdminCreds({ user, passHash: existing.passHash || existing.pass || null })
           sessionStorage.removeItem('dioura_admin_auth')
           alert('تم حفظ اسم المستخدم. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
-          window.location.href = '/'
+          window.location.href = '../index.html'
           return
         }
       })
@@ -319,7 +319,7 @@
     const adminLogoutBtn = document.getElementById('adminLogoutBtn')
     if(adminLogoutBtn) adminLogoutBtn.addEventListener('click',()=>{
       sessionStorage.removeItem('dioura_admin_auth')
-      alert('تم تسجيل الخروج'); window.location.href = '/'
+      alert('تم تسجيل الخروج'); window.location.href = '../index.html'
     })
   })
 

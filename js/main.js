@@ -22,6 +22,16 @@ const SEARCH_KEY = 'dioura_search'
 const FILTER_KEY = 'dioura_filter'
 const CATEGORIES_KEY = 'dioura_categories'
 
+// Resolve navigation paths to work both when pages are served from root or from a
+// sub-folder (e.g. GitHub Pages project site). Use relative paths according to
+// current location: if we're inside the `pages/` folder prefix ../ otherwise ./
+function toSitePath(target){
+  if(!target) return target
+  const t = target.replace(/^\//,'')
+  if(window.location.pathname.indexOf('/pages/') !== -1) return '../' + t
+  return './' + t
+}
+
 // default categories if none persisted yet (mirrors admin defaults)
 const DEFAULT_CATEGORIES = {
   'ملابس': ['نسائي', 'ولادي', 'رجالي'],
@@ -96,7 +106,7 @@ function renderProductsIfAny(){
     // include data-index on the link so product-details page can load canonical product data
     const originalIdx = allProducts.findIndex(op => op === p)
     card.innerHTML = `
-      <a href="/pages/product-details.html" data-index="${originalIdx}">
+      <a href="pages/product-details.html" data-index="${originalIdx}">
         <img src="${imgSrc}" alt="" />
       </a>
       <div class="content">
@@ -229,7 +239,7 @@ function initCategorySidebar(){
         if(window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === ''){
           window.location.hash = 'products'
         } else {
-          window.location.href = '/index.html#products'
+          window.location.href = toSitePath('index.html#products')
         }
       })
       subs.appendChild(b)
@@ -487,8 +497,8 @@ function populateProductDetailsFromStorage() {
       buyNowBtn.addEventListener('click', ()=>{
         const qty = Number((document.getElementById('productQuantity')||{value:1}).value||1)
         addToCart({ title: data.title||titleEl?.textContent||'Product', price: Number(data.price||0), img: (data.images && data.images[0])||data.img||'', quantity: Math.max(1, qty) })
-        // go to checkout page
-        window.location.href = '/pages/checkout.html'
+          // go to checkout page
+          window.location.href = toSitePath('pages/checkout.html')
       })
     }
     // ensure addToCartBtn has accessible attribute (delegated handler will pick it up as well)
@@ -517,7 +527,7 @@ function initSearch(){
     if(window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname === ''){
       window.location.hash = 'products'
     } else {
-      window.location.href = '/index.html#products'
+      window.location.href = toSitePath('index.html#products')
     }
   }
 
@@ -565,8 +575,8 @@ function renderCartPage() {
     `
     const checkoutBtn = summary.querySelector('.checkout')
     checkoutBtn.addEventListener('click', () => {
-      // navigate to checkout page
-      window.location.href = './checkout.html'
+      // navigate to checkout page (use toSitePath so it works from / and /pages/)
+      window.location.href = toSitePath('pages/checkout.html')
     })
   }
 }
@@ -746,7 +756,7 @@ function initCheckoutPage() {
       totalEl.style.display = 'none'
     } else {
       alert('تم تقديم الطلب. رقم الطلب: ' + orderId)
-      window.location.href = '/' 
+      window.location.href = toSitePath('index.html')
     }
   })
 }
@@ -861,7 +871,7 @@ function setAdminCreds(obj){
 window.showAdminLoginModal = async function(){
   // if already authenticated, go to admin
   if (sessionStorage.getItem('dioura_admin_auth') === '1'){
-    window.location.href = '/pages/admin.html'
+    window.location.href = toSitePath('pages/admin.html')
     return
   }
   // build modal
@@ -904,11 +914,11 @@ window.showAdminLoginModal = async function(){
     const u = document.getElementById('adminUserInput').value.trim()
     const p = document.getElementById('adminPassInput').value
     const ph = await hashString(p)
-    if(u === creds.user && ph === creds.passHash){
+      if(u === creds.user && ph === creds.passHash){
       sessionStorage.setItem('dioura_admin_auth','1')
       overlay.remove()
       // redirect to admin dashboard
-      window.location.href = '/pages/admin.html'
+      window.location.href = toSitePath('pages/admin.html')
     } else {
       alert('اسم المستخدم أو كلمة المرور خاطئان')
     }
