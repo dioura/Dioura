@@ -14,18 +14,44 @@ window.FirebaseClient = (function(){
     // dynamic import modular SDK
     modules = await Promise.all([
       import('https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js'),
-      import('https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js')
+      import('https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js'),
+      import('https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js')
     ])
     const firebaseApp = modules[0]
     const firestore = modules[1]
+    const firebaseAuth = modules[2]
     app = firebaseApp.initializeApp(config)
     db = firestore.getFirestore(app)
+    auth = firebaseAuth.getAuth ? firebaseAuth.getAuth(app) : null
     initialized = true
     console.info('Firebase initialized')
     return true
   }
 
   function isReady(){ return initialized && db }
+
+  // Auth helpers
+  function isAuthReady(){ return !!auth }
+
+  async function signIn(email, password){
+    if(!isAuthReady()) throw new Error('Auth not initialized')
+    const firebaseAuth = modules[2]
+    const res = await firebaseAuth.signInWithEmailAndPassword(auth, email, password)
+    return res.user
+  }
+
+  async function signOutUser(){
+    if(!isAuthReady()) throw new Error('Auth not initialized')
+    const firebaseAuth = modules[2]
+    await firebaseAuth.signOut(auth)
+    return true
+  }
+
+  function onAuthChanged(cb){
+    if(!isAuthReady()) return () => {}
+    const firebaseAuth = modules[2]
+    return firebaseAuth.onAuthStateChanged(auth, cb)
+  }
 
   async function fetchProducts(){
     if(!isReady()) return []
@@ -34,6 +60,17 @@ window.FirebaseClient = (function(){
       const q = await firestore.getDocs(firestore.collection(db,'products'))
       return q.docs.map(d => ({ id: d.id, ...d.data() }))
     }catch(e){ console.error('fetchProducts error', e); return [] }
+  }
+
+  async function fetchProductById(id){
+    if(!isReady()) return null
+    const firestore = modules[1]
+    try{
+      const ref = firestore.doc(db, 'products', id)
+      const snap = await firestore.getDoc(ref)
+      if(!snap.exists()) return null
+      return { id: snap.id, ...snap.data() }
+    }catch(e){ console.error('fetchProductById error', e); return null }
   }
 
   async function fetchProductById(id){
@@ -64,6 +101,7 @@ window.FirebaseClient = (function(){
     const res = await firestore.addDoc(firestore.collection(db,'products'), obj)
     return res.id
   }
+
 
   // Orders API
   async function addOrder(obj){
@@ -109,5 +147,5 @@ window.FirebaseClient = (function(){
     return true
   }
 
-  return { init, isReady, fetchProducts, fetchProductById, listenProducts, addProduct, updateProduct, deleteProduct, addOrder, fetchOrders, listenOrders }
+  return { init, isReady, isAuthReady, signIn, signOutUser, onAuthChanged, fetchProducts, fetchProductById, listenProducts, addProduct, updateProduct, deleteProduct, addOrder, fetchOrders, listenOrders }
 })();

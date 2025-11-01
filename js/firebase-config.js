@@ -13,6 +13,7 @@
     storageBucket: "your-app.appspot.com",
     messagingSenderId: "1234567890",
     appId: "1:2345:android:abcde"
+    appId: "1:2345:android:abcde"
   }
 
   After you add the real config, the site will attempt to initialize Firebase automatically.
@@ -28,3 +29,7 @@ window.FIREBASE_CONFIG = {
   appId: "1:318720916819:web:5a9f41cdfc32898723f5a6",
   measurementId: "G-VCPD99902W"
 }
+// Set to true only when you want the site to use Firebase in production.
+// Default is false to avoid CORS / permission issues while testing locally or on GitHub Pages.
+// Change to true to enable Firebase (ensure Firestore rules and Auth are configured first)
+window.FIREBASE_ENABLED = true;

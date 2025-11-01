@@ -52,8 +52,8 @@ function renderProductsIfAny(){
   const container = document.querySelector('section.products.flex')
   if(!container) return
 
-  // If FirebaseClient is initialized, listen for central data; otherwise use localStorage
-  if(window.FirebaseClient && window.FirebaseClient.isReady()){
+  // If Firebase is enabled and FirebaseClient is initialized, listen for central data; otherwise use localStorage
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
     // attach realtime listener
     try{
       window.FirebaseClient.listenProducts((products)=>{
@@ -451,8 +451,8 @@ document.addEventListener('click', (e) => {
         return
       }
     }
-    // If a Firebase-backed product id is present and Firebase is available, fetch it and store
-    if (dataId && window.FirebaseClient && window.FirebaseClient.isReady()){
+  // If a Firebase-backed product id is present and Firebase is enabled & available, fetch it and store
+  if (dataId && window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
       try{
         window.FirebaseClient.fetchProducts().then(products => {
           const prod = products.find(x=> x.id === dataId)
@@ -796,8 +796,8 @@ function initCheckoutPage() {
     }
     orders.push(order)
     localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
-    // also save to Firebase when available so admin can see orders centrally
-    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+  // also save to Firebase when enabled & available so admin can see orders centrally
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
       try{
         window.FirebaseClient.addOrder(order).then(id=>{
           console.info('Order saved to Firestore', id)
@@ -993,15 +993,31 @@ window.showAdminLoginModal = async function(){
   overlay.querySelector('#adminLoginBtn').addEventListener('click', async ()=>{
     const u = document.getElementById('adminUserInput').value.trim()
     const p = document.getElementById('adminPassInput').value
-    const ph = await hashString(p)
+    try{
+      if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isAuthReady && window.FirebaseClient.isAuthReady()){
+        // use Firebase Auth
+        try{
+          await window.FirebaseClient.signIn(u, p)
+          sessionStorage.setItem('dioura_admin_auth','1')
+          overlay.remove()
+          window.location.href = toSitePath('pages/admin.html')
+          return
+        }catch(fbe){
+          console.error('Firebase signIn failed', fbe)
+          alert('فشل تسجيل الدخول عبر Firebase: ' + (fbe && fbe.message ? fbe.message : String(fbe)))
+          return
+        }
+      }
+      const ph = await hashString(p)
       if(u === creds.user && ph === creds.passHash){
-      sessionStorage.setItem('dioura_admin_auth','1')
-      overlay.remove()
-      // redirect to admin dashboard
-      window.location.href = toSitePath('pages/admin.html')
-    } else {
-      alert('اسم المستخدم أو كلمة المرور خاطئان')
-    }
+        sessionStorage.setItem('dioura_admin_auth','1')
+        overlay.remove()
+        // redirect to admin dashboard
+        window.location.href = toSitePath('pages/admin.html')
+      } else {
+        alert('اسم المستخدم أو كلمة المرور خاطئان')
+      }
+    }catch(err){ console.error('Admin login error', err); alert('خطأ أثناء تسجيل الدخول') }
   })
 }
 

@@ -25,8 +25,8 @@
     const tbody = document.querySelector('#productsTable tbody')
     if(!tbody) return
 
-    // If Firebase is ready use it; otherwise fall back to localStorage
-    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+  // If Firebase is enabled and ready use it; otherwise fall back to localStorage
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
       window.FirebaseClient.fetchProducts().then(products => {
         tbody.innerHTML = ''
         products.forEach((p)=>{
@@ -79,6 +79,7 @@
     if(!form) return
     form.addEventListener('submit', async (ev)=>{
       ev.preventDefault()
+      console.log('admin: productForm submit triggered')
       try{
         const fd = new FormData(form)
         const index = fd.get('index')
@@ -109,7 +110,7 @@
           }
         }
 
-        console.log('admin: saving product', {index, title, price, images, discount, published})
+  console.log('admin: saving product', {index, title, price, images, discount, published})
   const products = getProducts()
   // read selected group/subcategory from the form
   const group = (fd.get('group')||'').toString()
@@ -121,20 +122,38 @@
     if(existing.createdAt) createdAt = existing.createdAt
   }
   const item = {title,description,images,price,discount,published, group, subcategory, createdAt}
-        if(window.FirebaseClient && window.FirebaseClient.isReady()){
-          // if editing, admin form index may contain a doc id when editing Firebase entries
-          if(index){
-            // treat index as doc id
-            await window.FirebaseClient.updateProduct(index, item)
-          } else {
-            await window.FirebaseClient.addProduct(item)
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
+          // try saving to Firebase but fall back to localStorage on any error
+          try{
+            if(index){
+              // treat index as doc id
+              await window.FirebaseClient.updateProduct(index, item)
+            } else {
+              await window.FirebaseClient.addProduct(item)
+            }
+            form.reset()
+            const preview = document.getElementById('imagePreview')
+            if(preview) preview.innerHTML = ''
+            // re-render (listener or manual)
+            renderProducts()
+            alert('تم حفظ المنتج (Firebase)')
+          }catch(fbErr){
+            console.error('Firebase save failed, falling back to localStorage', fbErr)
+            if(index){
+              products[Number(index)] = item
+            } else {
+              products.push(item)
+            }
+            saveProducts(products)
+            console.log('admin: products now (local fallback)', products)
+            form.reset()
+            const preview = document.getElementById('imagePreview')
+            if(preview) preview.innerHTML = ''
+            renderProducts()
+            alert('تم حفظ المنتج محلياً (تعذر الحفظ في Firebase)')
+            // notify main script to re-render if it listens to storage changes
+            window.dispatchEvent(new Event('storage'))
           }
-          form.reset()
-          const preview = document.getElementById('imagePreview')
-          if(preview) preview.innerHTML = ''
-          // re-render (listener or manual)
-          renderProducts()
-          alert('تم حفظ المنتج (Firebase)')
         } else {
           if(index){
             products[Number(index)] = item
@@ -170,7 +189,7 @@
         const docId = editBtn.dataset.id
         const idx = editBtn.dataset.index ? Number(editBtn.dataset.index) : null
         const f = form
-        if(docId && window.FirebaseClient && window.FirebaseClient.isReady()){
+  if(docId && window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
           try{
             const products = await window.FirebaseClient.fetchProducts()
             const p = products.find(x=>x.id === docId)
@@ -229,7 +248,7 @@
         if(!confirm('هل تريد حذف هذا المنتج؟')) return
         const docId = delBtn.dataset.id
         const idx = delBtn.dataset.index ? Number(delBtn.dataset.index) : null
-        if(docId && window.FirebaseClient && window.FirebaseClient.isReady()){
+  if(docId && window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
           try{
             await window.FirebaseClient.deleteProduct(docId)
             renderProducts()
@@ -250,7 +269,7 @@
     if(!tbody) return
     tbody.innerHTML = ''
     // If Firebase is available use it for orders; otherwise fall back to localStorage
-    if(window.FirebaseClient && window.FirebaseClient.isReady()){
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
       window.FirebaseClient.fetchOrders().then(orders=>{
         orders.slice().reverse().forEach(o=>{
           const tr = document.createElement('tr')
@@ -342,7 +361,7 @@
       return
     }
 
-    // render admin UI when authenticated
+  // render admin UI when authenticated
   // populate category selects before binding form
   try{ populateCategorySelects() }catch(e){}
   renderProducts()
@@ -351,7 +370,7 @@
     const clearAllBtn = document.getElementById('clearAllProductsBtn')
     if (clearAllBtn) clearAllBtn.addEventListener('click', async ()=>{
       if(!confirm('هل تريد حذف جميع المنتجات نهائياً؟ هذه العملية لا يمكن التراجع عنها.')) return
-      if(window.FirebaseClient && window.FirebaseClient.isReady()){
+  if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
         try{
           const prods = await window.FirebaseClient.fetchProducts()
           for(const p of prods){
@@ -381,51 +400,84 @@
     }
     function setAdminCreds(obj){localStorage.setItem('dioura_admin',JSON.stringify(obj))}
     if(settingsForm){
-      const creds = getAdminCreds()
-      settingsForm.adminUser.value = creds.user || 'Ali'
-      // do NOT pre-fill password field for security
-      settingsForm.adminPass.value = ''
-      settingsForm.addEventListener('submit', async (ev)=>{
-        ev.preventDefault()
-        const fd = new FormData(settingsForm)
-        const user = fd.get('adminUser')?.toString().trim() || 'Ali'
-        const pass = fd.get('adminPass')?.toString() || ''
-        if(pass){
-          // compute hash and store
-          try{
-            const enc = new TextEncoder().encode(pass)
-            const buf = await crypto.subtle.digest('SHA-256', enc)
-            const h = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')
-            setAdminCreds({user, passHash: h})
-            // force logout after password change to require re-login
+        // If Firebase is enabled, we won't save admin password locally; instead instruct to create admin user in Firebase Auth
+        const creds = getAdminCreds()
+        settingsForm.adminUser.value = creds.user || 'Ali'
+        settingsForm.adminPass.value = ''
+        settingsForm.addEventListener('submit', async (ev)=>{
+          ev.preventDefault()
+          if(window.FIREBASE_ENABLED){
+            alert('Firebase مفعل: لإدارة حساب المشرف استخدم Firebase Console لإضافة مستخدم (Authentication → Users). لا تقم بتخزين كلمة المرور محلياً.')
+            // still update username locally for fallback
+            const fd = new FormData(settingsForm)
+            const user = fd.get('adminUser')?.toString().trim() || 'Ali'
+            const existing = getAdminCreds() || {}
+            setAdminCreds({ user, passHash: existing.passHash || existing.pass || null })
             sessionStorage.removeItem('dioura_admin_auth')
-            alert('تم حفظ بيانات المسؤول. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
+            alert('تم حفظ اسم المستخدم محلياً. استخدم Firebase Console لإضافة مستخدم المشرف.')
             window.location.href = '../index.html'
             return
-          }catch(e){
-            // fallback: store plaintext if hashing fails
-            setAdminCreds({user, passHash: null, pass: pass})
-            sessionStorage.removeItem('dioura_admin_auth')
-            alert('تم حفظ بيانات المسؤول (ملاحظة: تم تخزين كلمة المرور نصاً). سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
-            window.location.href = '../index.html'
-            return
+          } else {
+            const fd = new FormData(settingsForm)
+            const user = fd.get('adminUser')?.toString().trim() || 'Ali'
+            const pass = fd.get('adminPass')?.toString() || ''
+            if(pass){
+              try{
+                const enc = new TextEncoder().encode(pass)
+                const buf = await crypto.subtle.digest('SHA-256', enc)
+                const h = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')
+                setAdminCreds({user, passHash: h})
+                sessionStorage.removeItem('dioura_admin_auth')
+                alert('تم حفظ بيانات المسؤول. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.');
+                window.location.href = '../index.html'
+                return
+              }catch(e){
+                setAdminCreds({user, passHash: null, pass: pass})
+                sessionStorage.removeItem('dioura_admin_auth')
+                alert('تم حفظ بيانات المسؤول (تم تخزين كلمة المرور نصياً). سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.');
+                window.location.href = '../index.html'
+                return
+              }
+            } else {
+              const existing = getAdminCreds() || {}
+              setAdminCreds({ user, passHash: existing.passHash || existing.pass || null })
+              sessionStorage.removeItem('dioura_admin_auth')
+              alert('تم حفظ اسم المستخدم. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
+              window.location.href = '../index.html'
+              return
+            }
           }
-        } else {
-          // only update username -> still force logout to ensure session consistency
-          const existing = getAdminCreds() || {}
-          setAdminCreds({ user, passHash: existing.passHash || existing.pass || null })
-          sessionStorage.removeItem('dioura_admin_auth')
-          alert('تم حفظ اسم المستخدم. سيتم إعادة توجيهك لتسجيل الدخول مرة أخرى.')
-          window.location.href = '../index.html'
-          return
-        }
-      })
+        })
     }
     const adminLogoutBtn = document.getElementById('adminLogoutBtn')
     if(adminLogoutBtn) adminLogoutBtn.addEventListener('click',()=>{
       sessionStorage.removeItem('dioura_admin_auth')
       alert('تم تسجيل الخروج'); window.location.href = '../index.html'
     })
+
+    // If Firebase is enabled show a quick sync button to push local products to Firestore
+    if(window.FIREBASE_ENABLED && window.FirebaseClient && window.FirebaseClient.isReady()){
+      const wrap = document.createElement('div')
+      wrap.style.marginTop = '.8rem'
+      const btn = document.createElement('button')
+      btn.textContent = 'مزامنة المنتجات المحلية إلى Firebase'
+      btn.className = 'save'
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('هل تريد رفع جميع المنتجات المحلية إلى Firebase؟ قد يتسبب ذلك بتكرار المنتجات إذا كانت موجودة بالفعل.')) return
+        try{
+          const prods = getProducts()
+          let count = 0
+          for(const p of prods){
+            try{ await window.FirebaseClient.addProduct(p); count++ }catch(e){ console.error('sync product failed', e) }
+          }
+          alert('تمت مزامنة ' + count + ' منتج(منتجات) إلى Firebase')
+          renderProducts()
+        }catch(e){ console.error('sync failed', e); alert('فشل المزامنة') }
+      })
+      const container = document.querySelector('.admin-root')
+      if(container) container.insertBefore(wrap, container.firstChild)
+      wrap.appendChild(btn)
+    }
   })
 
   // populate categories into the product form selects
